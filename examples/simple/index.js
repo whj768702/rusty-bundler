@@ -1,2 +1,2 @@
-import { greet } from "./utils.js";
+const { greet } = require("./utils.js");
 greet("Rust");

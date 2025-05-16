@@ -1,3 +1,3 @@
-export function greet(name) {
+exports.greet= function(name) {
   console.log(`Hello, ${name}!`);
 }
