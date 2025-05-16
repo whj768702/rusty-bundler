@@ -1,12 +1,22 @@
-// Bundled by rust-bundler
-
-// module: examples/simple/index.js
-import { greet } from "./utils.js";
+(function(modules) {
+         const require = (id) => {
+           const fn = modules[id];
+           const module = { exports: {} };
+           fn(require, module, module.exports);
+           return module.exports;
+         };
+         require("./index.js");
+       })({
+         "./index.js": function(require, module, exports) {
+const { greet } = require("./utils.js");
 greet("Rust");
 
-
-// module: examples/simple/./utils.js
-export function greet(name) {
+}, 
+"./utils.js": function(require, module, exports) {
+exports.greet= function(name) {
   console.log(`Hello, ${name}!`);
 }
 
+}, 
+
+       });
