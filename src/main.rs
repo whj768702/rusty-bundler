@@ -1,7 +1,7 @@
 mod bundler;
 mod parser;
 
-use bundler::{build_module_graph, bundle, print_module_graph};
+use bundler::{build_module_graph, bundle};
 use std::env;
 use std::fs;
 
@@ -16,9 +16,6 @@ fn main() {
     let graph = build_module_graph(entry);
 
     let bundled_code = bundle(&graph, entry);
-
-    println!("Module Graph: ");
-    print_module_graph(&graph, "./index.js", 0);
 
     fs::create_dir_all("dist").unwrap();
     fs::write("dist/bundle.js", bundled_code).unwrap();

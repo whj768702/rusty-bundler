@@ -7,15 +7,15 @@
          };
          require("./index.js");
        })({
-         "./index.js": function(require, module, exports) {
-const { greet } = require("./utils.js");
-greet("Rust");
-
-}, 
-"./utils.js": function(require, module, exports) {
+         "./utils.js": function(require, module, exports) {
 exports.greet= function(name) {
   console.log(`Hello, ${name}!`);
 }
+
+}, 
+"./index.js": function(require, module, exports) {
+const { greet } = require("./utils.js");
+greet("Rust");
 
 }, 
 
