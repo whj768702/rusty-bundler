@@ -99,3 +99,13 @@ pub fn bundle(graph: &ModuleGraph, entry: &str) -> String {
         entry_id, modules_code
     )
 }
+
+pub fn print_module_graph(graph: &ModuleGraph, entry_id:&str, indent:usize) {
+    if let Some(module) = graph.get(entry_id) {
+        let prefix = " ".repeat(indent);
+        println!("{}- {}", prefix, module.id);
+        for dep in &module.deps {
+            print_module_graph(graph, dep, indent + 1);
+        }
+    }
+}
