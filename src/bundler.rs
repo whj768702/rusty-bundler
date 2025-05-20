@@ -144,3 +144,32 @@ pub fn print_module_graph(graph: &ModuleGraph, entry_id: &str, indent: usize) {
         }
     }
 }
+
+pub fn bundle_to_file(entry_path: &Path, output_path: &PathBuf) -> Result<(), String> {
+    if !entry_path.exists() {
+        return Err(format!("入口文件不存在: {:?}", entry_path));
+    }
+
+    if !entry_path.is_file() {
+        return Err(format!("入口文件不是一个文件: {:?}", entry_path));
+    }
+
+    if output_path.exists() && !output_path.is_file() {
+        return Err(format!("输出路径不是一个文件: {:?}", output_path));
+    }
+
+    if output_path.exists() {
+        fs::remove_file(output_path).map_err(|e| format!("删除原输出文件失败: {}", e))?;
+    }
+
+    if let Some(parent) = output_path.parent() {
+        fs::create_dir_all(parent).map_err(|e| format!("创建输出目录失败: {}", e))?;
+    }
+
+    let entry_str = entry_path.to_str().ok_or("入口路径包含非法字符")?;
+    let graph = build_module_graph(entry_path.to_str().unwrap());
+    let code = bundle(&graph, entry_str);
+
+    fs::write(output_path, code).map_err(|e| format!("写入文件失败: {}", e))?;
+    Ok(())
+}
