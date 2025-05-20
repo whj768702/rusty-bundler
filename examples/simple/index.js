@@ -1,4 +1,2 @@
-// const { greet } = require("./utils.js");
-// greet("Rust");
-const msg = require('./utils.js');
+import msg from './utils.js';
 console.log(msg);

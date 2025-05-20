@@ -1,16 +1,11 @@
 const modules = {
- "./utils.js": function(require, module, exports) {
-// exports.greet= function(name) {
-//   console.log(`Hello, ${name}!`);
-// }
-module.exports = "hello";
+ "./index.js": function(require, module, exports) {
+const msg = require("./utils.js");;
+console.log(msg);
 
   },
- "./index.js": function(require, module, exports) {
-// const { greet } = require("./utils.js");
-// greet("Rust");
-const msg = require('./utils.js');
-console.log(msg);
+ "./utils.js": function(require, module, exports) {
+module.exports = "hello world!";
 
   },
 };

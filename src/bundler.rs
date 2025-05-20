@@ -1,4 +1,4 @@
-use crate::parser::parse_imports;
+use crate::parser::{parse_imports, transform_es_to_commonjs};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -34,7 +34,8 @@ fn to_relative_id(full_path: &Path, base_dir: &Path) -> String {
 }
 
 fn walk(path: &Path, base_dir: &Path, graph: &mut ModuleGraph) {
-    let code = fs::read_to_string(path).expect(&format!("读取文件失败: {:?}", path));
+    let raw_code = fs::read_to_string(path).expect(&format!("读取文件失败: {:?}", path));
+    let code = transform_es_to_commonjs(&raw_code);
     println!("code: {}", code);
     let imports = parse_imports(&code);
 
