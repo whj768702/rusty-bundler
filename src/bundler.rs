@@ -71,33 +71,56 @@ pub fn build_module_graph(entry: &str) -> HashMap<String, ModuleInfo> {
 }
 
 pub fn bundle(graph: &ModuleGraph, entry: &str) -> String {
-    let mut modules_code = String::new();
+    let mut output = String::new();
+
+    // 1. 开始模块定义对象
+    output.push_str("const modules = {\n");
 
     for (id, module) in graph {
-        modules_code.push_str(&format!(
-            "\"{}\": function(require, module, exports) {{\n{}\n}}, \n",
-            id, module.code
-        ));
-        println!("打包模块: {}", id);
+        output.push_str(&format!(" {:?}: function(require, module, exports) {{\n", id));
+        output.push_str(&module.code);
+        output.push_str("\n  },\n");
+        // modules_code.push_str(&format!(
+        //     "\"{}\": function(require, module, exports) {{\n{}\n}}, \n",
+        //     id, module.code
+        // ));
+        // println!("打包模块: {}", id);
     }
+    output.push_str("};\n\n");
 
-    let entry_path = Path::new(entry).canonicalize().unwrap();
-    let entry_id = to_relative_id(&entry_path, entry_path.parent().unwrap());
+    // 2. 定义require函数
+    output.push_str(
+        r#"
+        function require(id) {
+            const module = {exports: {}};
+            modules[id](require, module, module.exports);
+            return module.exports;
+        }
+        "#
+    );
 
-    format!(
-        r#"(function(modules) {{
-         const require = (id) => {{
-           const fn = modules[id];
-           const module = {{ exports: {{}} }};
-           fn(require, module, module.exports);
-           return module.exports;
-         }};
-         require("{}");
-       }})({{
-         {}
-       }});"#,
-        entry_id, modules_code
-    )
+    // 3. 执行入口模块
+    output.push_str(&format!("\nrequire({:?});\n", entry));
+
+    output
+
+    // let entry_path = Path::new(entry).canonicalize().unwrap();
+    // let entry_id = to_relative_id(&entry_path, entry_path.parent().unwrap());
+
+    // format!(
+    //     r#"(function(modules) {{
+    //      const require = (id) => {{
+    //        const fn = modules[id];
+    //        const module = {{ exports: {{}} }};
+    //        fn(require, module, module.exports);
+    //        return module.exports;
+    //      }};
+    //      require("{}");
+    //    }})({{
+    //      {}
+    //    }});"#,
+    //     entry_id, modules_code
+    // )
 }
 
 pub fn print_module_graph(graph: &ModuleGraph, entry_id:&str, indent:usize) {
