@@ -72,13 +72,19 @@ pub fn build_module_graph(entry: &str) -> HashMap<String, ModuleInfo> {
 }
 
 pub fn bundle(graph: &ModuleGraph, entry: &str) -> String {
+    let entry_path = Path::new(entry).to_path_buf();
+    let base_dir = entry_path.parent().unwrap().to_path_buf();
+    let entry_id = to_relative_id(&entry_path, &base_dir);
     let mut output = String::new();
 
     // 1. 开始模块定义对象
     output.push_str("const modules = {\n");
 
     for (id, module) in graph {
-        output.push_str(&format!(" {:?}: function(require, module, exports) {{\n", id));
+        output.push_str(&format!(
+            " {:?}: function(require, module, exports) {{\n",
+            id
+        ));
         output.push_str(&module.code);
         output.push_str("\n  },\n");
         // modules_code.push_str(&format!(
@@ -92,16 +98,21 @@ pub fn bundle(graph: &ModuleGraph, entry: &str) -> String {
     // 2. 定义require函数
     output.push_str(
         r#"
+        const cache = {};
         function require(id) {
+            if(cache[id]){
+                return cache[id].exports;
+            }
             const module = {exports: {}};
+            cache[id] = module;
             modules[id](require, module, module.exports);
             return module.exports;
         }
-        "#
+        "#,
     );
 
     // 3. 执行入口模块
-    output.push_str(&format!("\nrequire({:?});\n", entry));
+    output.push_str(&format!("\nrequire({:?});\n", entry_id));
 
     output
 
@@ -124,7 +135,7 @@ pub fn bundle(graph: &ModuleGraph, entry: &str) -> String {
     // )
 }
 
-pub fn print_module_graph(graph: &ModuleGraph, entry_id:&str, indent:usize) {
+pub fn print_module_graph(graph: &ModuleGraph, entry_id: &str, indent: usize) {
     if let Some(module) = graph.get(entry_id) {
         let prefix = " ".repeat(indent);
         println!("{}- {}", prefix, module.id);
