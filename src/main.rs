@@ -19,12 +19,16 @@ struct Cli {
     /// Path to the output bundle file
     #[arg(short, long, default_value = "dist/bundle.js")]
     output: PathBuf,
+
+    /// Ouput module format: esm | cjs
+    #[arg(short, long, default_value = "cjs")]
+    format: String,
 }
 
 fn main() {
     let cli = Cli::parse();
 
-    match bundle_to_file(&cli.entry, &cli.output) {
+    match bundle_to_file(&cli.entry, &cli.output, &cli.format) {
         Ok(_) => println!("✅ 打包成功，输出文件: {:?}", cli.output),
         Err(e) => eprintln!("❌ 打包失败: {}", e),
     }

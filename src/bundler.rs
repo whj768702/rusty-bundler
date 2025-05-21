@@ -71,68 +71,60 @@ pub fn build_module_graph(entry: &str) -> HashMap<String, ModuleInfo> {
     graph
 }
 
-pub fn bundle(graph: &ModuleGraph, entry: &str) -> String {
+pub fn bundle(graph: &ModuleGraph, entry: &str, format: &str) -> String {
     let entry_path = Path::new(entry).to_path_buf();
     let base_dir = entry_path.parent().unwrap().to_path_buf();
     let entry_id = to_relative_id(&entry_path, &base_dir);
     let mut output = String::new();
 
-    // 1. 开始模块定义对象
-    output.push_str("const modules = {\n");
-
-    for (id, module) in graph {
-        output.push_str(&format!(
-            " {:?}: function(require, module, exports) {{\n",
-            id
-        ));
-        output.push_str(&module.code);
-        output.push_str("\n  },\n");
-        // modules_code.push_str(&format!(
-        //     "\"{}\": function(require, module, exports) {{\n{}\n}}, \n",
-        //     id, module.code
-        // ));
-        // println!("打包模块: {}", id);
-    }
-    output.push_str("};\n\n");
-
-    // 2. 定义require函数
-    output.push_str(
-        r#"
-        const cache = {};
-        function require(id) {
-            if(cache[id]){
-                return cache[id].exports;
+    match format {
+        "esm" => {
+            for (id, module) in graph {
+                output.push_str(&format!("// {}\n{}\n", id, module.code));
             }
-            const module = {exports: {}};
-            cache[id] = module;
-            modules[id](require, module, module.exports);
-            return module.exports;
+            output.push_str(&format!("\nimport \"{}\";\n", entry_id));
         }
-        "#,
-    );
+        _ => {
+            // 1. 开始模块定义对象
+            output.push_str("const modules = {\n");
 
-    // 3. 执行入口模块
-    output.push_str(&format!("\nrequire({:?});\n", entry_id));
+            for (id, module) in graph {
+                output.push_str(&format!(
+                    " {:?}: function(require, module, exports) {{\n",
+                    id
+                ));
+                output.push_str(&module.code);
+                output.push_str("\n  },\n");
+                // modules_code.push_str(&format!(
+                //     "\"{}\": function(require, module, exports) {{\n{}\n}}, \n",
+                //     id, module.code
+                // ));
+                // println!("打包模块: {}", id);
+            }
+            output.push_str("};\n\n");
+
+            // 2. 定义require函数
+            output.push_str(
+                r#"
+                    const cache = {};
+                    function require(id) {
+                        if(cache[id]){
+                            return cache[id].exports;
+                        }
+                        const module = {exports: {}};
+                        cache[id] = module;
+                        modules[id](require, module, module.exports);
+                        return module.exports;
+                    }
+                "#,
+            );
+
+            // 3. 执行入口模块
+            output.push_str(&format!("\nrequire({:?});\n", entry_id));
+        }
+    }
 
     output
-
-    // let entry_path = Path::new(entry).canonicalize().unwrap();
-    // let entry_id = to_relative_id(&entry_path, entry_path.parent().unwrap());
-
-    // format!(
-    //     r#"(function(modules) {{
-    //      const require = (id) => {{
-    //        const fn = modules[id];
-    //        const module = {{ exports: {{}} }};
-    //        fn(require, module, module.exports);
-    //        return module.exports;
-    //      }};
-    //      require("{}");
-    //    }})({{
-    //      {}
-    //    }});"#,
-    //     entry_id, modules_code
-    // )
 }
 
 pub fn print_module_graph(graph: &ModuleGraph, entry_id: &str, indent: usize) {
@@ -145,7 +137,11 @@ pub fn print_module_graph(graph: &ModuleGraph, entry_id: &str, indent: usize) {
     }
 }
 
-pub fn bundle_to_file(entry_path: &Path, output_path: &PathBuf) -> Result<(), String> {
+pub fn bundle_to_file(
+    entry_path: &Path,
+    output_path: &PathBuf,
+    format: &str,
+) -> Result<(), String> {
     if !entry_path.exists() {
         return Err(format!("入口文件不存在: {:?}", entry_path));
     }
@@ -168,7 +164,7 @@ pub fn bundle_to_file(entry_path: &Path, output_path: &PathBuf) -> Result<(), St
 
     let entry_str = entry_path.to_str().ok_or("入口路径包含非法字符")?;
     let graph = build_module_graph(entry_path.to_str().unwrap());
-    let code = bundle(&graph, entry_str);
+    let code = bundle(&graph, entry_str, format);
 
     fs::write(output_path, code).map_err(|e| format!("写入文件失败: {}", e))?;
     Ok(())
