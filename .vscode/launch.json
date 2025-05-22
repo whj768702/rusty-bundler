@@ -8,11 +8,61 @@
       "type": "lldb",
       "request": "launch",
       "program": "${workspaceFolder}/target/debug/${workspaceFolderBasename}",
+      "cargo": {
+        "args": [
+          "run",
+          "--",
+          "--entry",
+          "examples/simple/index.js",
+          "--format",
+          "cjs",
+        ]
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}",
+      "stopOnEntry": false,
+      "sourceLanguages": [
+        "rust"
+      ],
+      "internalConsoleOptions": "openOnSessionStart",
+      "env": {
+        "RUST_BACKTRACE": "1"
+      },
+    },
+    {
+      "name": "Debug compiled binary with args",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/target/debug/rusty-bundler",
       "args": [
-        "examples/simple/index.js"
+        "--entry",
+        "examples/simple/index.js",
+        "--format",
+        "cjs"
       ],
       "cwd": "${workspaceFolder}",
-      "stopOnEntry": false
+      "stopOnEntry": false,
+      "internalConsoleOptions": "openOnSessionStart"
+    },
+    {
+      "name": "Debug rusty-bundler CLI",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/target/debug/rusty-bundler",
+      "args": [
+        "--entry",
+        "examples/simple/index.js",
+        "--format",
+        "cjs"
+      ],
+      "cwd": "${workspaceFolder}",
+      "stopOnEntry": false,
+      "sourceLanguages": [
+        "rust"
+      ],
+      "env": {
+        "RUST_BACKTRACE": "1"
+      }
     }
   ],
   "version": "0.2.0",
