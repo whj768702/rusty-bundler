@@ -1,5 +1,6 @@
 use crate::parser::{parse_imports, transform_es_to_commonjs};
 use std::collections::HashMap;
+use std::fmt::format;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -33,9 +34,12 @@ fn to_relative_id(full_path: &Path, base_dir: &Path) -> String {
     }
 }
 
-fn walk(path: &Path, base_dir: &Path, graph: &mut ModuleGraph) {
+fn walk(path: &Path, base_dir: &Path, graph: &mut ModuleGraph, format: &str) {
     let raw_code = fs::read_to_string(path).expect(&format!("读取文件失败: {:?}", path));
-    let code = transform_es_to_commonjs(&raw_code);
+    let code = match format {
+        "cjs" => transform_es_to_commonjs(&raw_code),
+        _ => raw_code,
+    };
     println!("code: {}", code);
     let imports = parse_imports(&code);
 
@@ -56,17 +60,17 @@ fn walk(path: &Path, base_dir: &Path, graph: &mut ModuleGraph) {
     for dep in imports {
         let full_dep_path = resolve_module_path(path.parent().unwrap(), &dep);
 
-        walk(&full_dep_path, base_dir, graph);
+        walk(&full_dep_path, base_dir, graph, format);
     }
 }
 
-pub fn build_module_graph(entry: &str) -> HashMap<String, ModuleInfo> {
+pub fn build_module_graph(entry: &str, format: &str) -> HashMap<String, ModuleInfo> {
     let entry_path = Path::new(entry).to_path_buf();
     let base_dir = entry_path.parent().unwrap().to_path_buf();
 
     let mut graph = HashMap::new();
 
-    walk(&entry_path, &base_dir, &mut graph);
+    walk(&entry_path, &base_dir, &mut graph, format);
 
     graph
 }
@@ -163,7 +167,7 @@ pub fn bundle_to_file(
     }
 
     let entry_str = entry_path.to_str().ok_or("入口路径包含非法字符")?;
-    let graph = build_module_graph(entry_path.to_str().unwrap());
+    let graph = build_module_graph(entry_path.to_str().unwrap(), format);
     let code = bundle(&graph, entry_str, format);
 
     fs::write(output_path, code).map_err(|e| format!("写入文件失败: {}", e))?;
