@@ -1,7 +1,3 @@
-import print from './a';
-
-print();
-
 function add(a, b) {
   return a + b;
 }
