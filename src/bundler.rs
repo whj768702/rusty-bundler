@@ -17,37 +17,59 @@ fn resolve_module_path(base_path: &Path, dep: &str) -> PathBuf {
     if dep_path.extension().is_none() {
         dep_path.set_extension("js");
     }
+
     dep_path
+        .canonicalize()
+        .unwrap_or_else(|_| panic!("无法解析模块路径: {:?}", dep_path))
 }
 
 fn to_relative_id(full_path: &Path, base_dir: &Path) -> String {
+    let full_path = full_path.canonicalize().expect("无法规范化 full_path");
+    let base_dir = base_dir.canonicalize().expect("无法规范化 base_dir");
+
     let rel = full_path
         .strip_prefix(base_dir)
         .unwrap()
         .to_string_lossy()
         .replace("\\", "/");
 
-    if !rel.starts_with("./") {
-        format!("./{}", rel)
-    } else {
+    if rel.starts_with("./") {
         rel
+    } else {
+        format!("./{}", rel)
     }
 }
 
-fn walk(path: &Path, base_dir: &Path, graph: &mut ModuleGraph, format: &str) {
+fn walk(
+    path: &Path,
+    base_dir: &Path,
+    graph: &mut ModuleGraph,
+    path_stack: &mut Vec<String>,
+    format: &str,
+) {
+    let id = to_relative_id(path, base_dir);
+
+    // 避免循环依赖
+    if path_stack.contains(&id) {
+        println!("检测到循环依赖: {}", id);
+        return;
+    }
+
+    // 避免重复加载
+    if graph.contains_key(&id) {
+        return;
+    }
+
+    println!("walk 进入: {}, 当前 path_stack: {:?}", id, path_stack);
+    path_stack.push(id.clone());
+
     let raw_code = fs::read_to_string(path).expect(&format!("读取文件失败: {:?}", path));
     let code = match format {
         "cjs" => transform_es_to_commonjs(&raw_code),
         _ => raw_code,
     };
-    println!("code: {}", code);
+
     let imports = parse_imports(&code);
-
-    let id = to_relative_id(path, base_dir);
-
-    if graph.contains_key(&id) {
-        return;
-    }
 
     let module = ModuleInfo {
         id: id.clone(),
@@ -60,8 +82,13 @@ fn walk(path: &Path, base_dir: &Path, graph: &mut ModuleGraph, format: &str) {
     for dep in imports {
         let full_dep_path = resolve_module_path(path.parent().unwrap(), &dep);
 
-        walk(&full_dep_path, base_dir, graph, format);
+        walk(&full_dep_path, base_dir, graph, path_stack, format);
     }
+
+    // 避免误报循环依赖
+    path_stack.pop();
+
+    println!("walk 离开: {}, 当前 path_stack: {:?}", id, path_stack);
 }
 
 pub fn build_module_graph(entry: &str, format: &str) -> HashMap<String, ModuleInfo> {
@@ -70,7 +97,9 @@ pub fn build_module_graph(entry: &str, format: &str) -> HashMap<String, ModuleIn
 
     let mut graph = HashMap::new();
 
-    walk(&entry_path, &base_dir, &mut graph, format);
+    let mut path_stack: Vec<String> = vec![];
+
+    walk(&entry_path, &base_dir, &mut graph, &mut path_stack, format);
 
     graph
 }
