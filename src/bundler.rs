@@ -1,95 +1,8 @@
-use crate::parser::{parse_imports, transform_es_to_commonjs};
 use std::collections::HashMap;
-use std::fmt::format;
 use std::fs;
 use std::path::{Path, PathBuf};
-
-pub struct ModuleInfo {
-    pub id: String,
-    pub code: String,
-    pub deps: Vec<String>,
-}
-
-pub type ModuleGraph = HashMap<String, ModuleInfo>;
-
-fn resolve_module_path(base_path: &Path, dep: &str) -> PathBuf {
-    let mut dep_path = base_path.join(dep);
-    if dep_path.extension().is_none() {
-        dep_path.set_extension("js");
-    }
-
-    dep_path
-        .canonicalize()
-        .unwrap_or_else(|_| panic!("无法解析模块路径: {:?}", dep_path))
-}
-
-fn to_relative_id(full_path: &Path, base_dir: &Path) -> String {
-    let full_path = full_path.canonicalize().expect("无法规范化 full_path");
-    let base_dir = base_dir.canonicalize().expect("无法规范化 base_dir");
-
-    let rel = full_path
-        .strip_prefix(base_dir)
-        .unwrap()
-        .to_string_lossy()
-        .replace("\\", "/");
-
-    if rel.starts_with("./") {
-        rel
-    } else {
-        format!("./{}", rel)
-    }
-}
-
-fn walk(
-    path: &Path,
-    base_dir: &Path,
-    graph: &mut ModuleGraph,
-    path_stack: &mut Vec<String>,
-    format: &str,
-) {
-    let id = to_relative_id(path, base_dir);
-
-    // 避免循环依赖
-    if path_stack.contains(&id) {
-        println!("检测到循环依赖: {}", id);
-        return;
-    }
-
-    // 避免重复加载
-    if graph.contains_key(&id) {
-        return;
-    }
-
-    println!("walk 进入: {}, 当前 path_stack: {:?}", id, path_stack);
-    path_stack.push(id.clone());
-
-    let raw_code = fs::read_to_string(path).expect(&format!("读取文件失败: {:?}", path));
-    let code = match format {
-        "cjs" => transform_es_to_commonjs(&raw_code),
-        _ => raw_code,
-    };
-
-    let imports = parse_imports(&code);
-
-    let module = ModuleInfo {
-        id: id.clone(),
-        code,
-        deps: imports.clone(),
-    };
-
-    graph.insert(id.clone(), module);
-
-    for dep in imports {
-        let full_dep_path = resolve_module_path(path.parent().unwrap(), &dep);
-
-        walk(&full_dep_path, base_dir, graph, path_stack, format);
-    }
-
-    // 避免误报循环依赖
-    path_stack.pop();
-
-    println!("walk 离开: {}, 当前 path_stack: {:?}", id, path_stack);
-}
+use crate::utils::{to_relative_id};
+use crate::graph::{walk, ModuleGraph, ModuleInfo};
 
 pub fn build_module_graph(entry: &str, format: &str) -> HashMap<String, ModuleInfo> {
     let entry_path = Path::new(entry).to_path_buf();
@@ -158,16 +71,6 @@ pub fn bundle(graph: &ModuleGraph, entry: &str, format: &str) -> String {
     }
 
     output
-}
-
-pub fn print_module_graph(graph: &ModuleGraph, entry_id: &str, indent: usize) {
-    if let Some(module) = graph.get(entry_id) {
-        let prefix = " ".repeat(indent);
-        println!("{}- {}", prefix, module.id);
-        for dep in &module.deps {
-            print_module_graph(graph, dep, indent + 1);
-        }
-    }
 }
 
 pub fn bundle_to_file(

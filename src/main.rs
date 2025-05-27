@@ -1,6 +1,9 @@
+mod utils;
 mod bundler;
 mod parser;
 mod parser_cjs_exports;
+mod graph;
+mod format;
 
 use bundler::bundle_to_file;
 use clap::Parser;

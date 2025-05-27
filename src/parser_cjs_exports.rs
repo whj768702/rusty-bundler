@@ -38,7 +38,7 @@ impl ExportCollector {
     }
 
     fn extract_export_named(&mut self, code: &mut String) {
-        let re = Regex::new(r"export\s+\{([^}]+)\};").unwrap();
+        let re = Regex::new(r"export\s+\{([^}]+)};").unwrap();
         let mut exports = Vec::new();
 
         // 提取具名导出
@@ -52,10 +52,10 @@ impl ExportCollector {
                 }
 
                 if part.contains(" as ") {
-                    let subparts: Vec<&str> = part.split(" as ").map(|s| s.trim()).collect();
-                    if subparts.len() == 2 {
-                        let original = subparts[0];
-                        let alias = subparts[1];
+                    let subpart: Vec<&str> = part.split(" as ").map(|s| s.trim()).collect();
+                    if subpart.len() == 2 {
+                        let original = subpart[0];
+                        let alias = subpart[1];
                         exports.push((alias.to_string(), original.to_string()));
                     }
                 } else {
