@@ -32,21 +32,5 @@ pub fn transform_es_to_commonjs(code: &str) -> String {
         .replace_all(&result, r#"const {$1} = require("$2");"#)
         .to_string();
 
-    // // export default xxx; => module.exports = xxx;
-    // let export_default_re = regex::Regex::new(r#"export\s+default\s+([a-zA-Z_$]*)"#).unwrap();
-    // result = export_default_re
-    //     .replace_all(&result, r#"module.exports = {default: $1}"#)
-    //     .to_string();
-
-    // // export { a, b } => module.exports = { a, b }
-    // let export_named_re = regex::Regex::new(r#"export\s+\{\s*([^}]+?)\s*\};"#).unwrap();
-    // result = export_named_re
-    //     .replace_all(&result, r#"module.exports = { $1 };"#)
-    //     .to_string();
-
-    // // export const a = ... => const a = ...
-    // let export_named_re = regex::Regex::new(r#"export\s+(const|let|var|function)\s+"#).unwrap();
-    // result = export_named_re.replace_all(&result, r#"$1 "#).to_string();
-
     result
 }

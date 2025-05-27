@@ -41,11 +41,6 @@ pub fn bundle(graph: &ModuleGraph, entry: &str, format: &str) -> String {
                 ));
                 output.push_str(&module.code);
                 output.push_str("\n  },\n");
-                // modules_code.push_str(&format!(
-                //     "\"{}\": function(require, module, exports) {{\n{}\n}}, \n",
-                //     id, module.code
-                // ));
-                // println!("打包模块: {}", id);
             }
             output.push_str("};\n\n");
 
