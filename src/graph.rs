@@ -7,7 +7,7 @@ use crate::format::transform_es_to_commonjs;
 
 pub struct ModuleInfo {
     pub id: String,
-    pub code: String,
+    pub code: HashMap<String,String>,
     pub deps: Vec<String>,
 }
 
@@ -18,7 +18,7 @@ pub fn walk(
     base_dir: &Path,
     graph: &mut ModuleGraph,
     path_stack: &mut Vec<String>,
-    format: &str,
+    formats: &[String],
 ) {
     let id = to_relative_id(path, base_dir);
 
@@ -37,16 +37,22 @@ pub fn walk(
     path_stack.push(id.clone());
 
     let raw_code = fs::read_to_string(path).expect(&format!("读取文件失败: {:?}", path));
-    let code = match format {
-        "cjs" => transform_es_to_commonjs(&raw_code),
-        _ => raw_code,
-    };
+    
+    let mut code_map = HashMap::new();
+    for fmt in formats {
+        let code = match fmt.as_str() {
+            "cjs" => transform_es_to_commonjs(&raw_code),
+            "esm" => raw_code.clone(),
+            _ => raw_code.clone(),
+        };
+        code_map.insert(fmt.clone(), code);
+    }
 
-    let imports = parse_imports(&code);
+    let imports = parse_imports(&raw_code);//注意，这里必须用原始代码来解析依赖
 
     let module = ModuleInfo {
         id: id.clone(),
-        code,
+        code:code_map,
         deps: imports.clone(),
     };
 
@@ -55,7 +61,7 @@ pub fn walk(
     for dep in imports {
         let full_dep_path = resolve_module_path(path.parent().unwrap(), &dep);
 
-        walk(&full_dep_path, base_dir, graph, path_stack, format);
+        walk(&full_dep_path, base_dir, graph, path_stack, formats);
     }
 
     // 避免误报循环依赖
